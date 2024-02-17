@@ -35,7 +35,7 @@
         // form.append('file', new File(file, 'test.txt'));
         form.append('file', document.getElementById('input_file').files[0]);
 
-        const response = await fetch('https://0x0.st', {
+        const response = await fetch('http://localhost:54321/functions/v1/fetch_file', {
             method: 'POST',
             body: form,
         });
