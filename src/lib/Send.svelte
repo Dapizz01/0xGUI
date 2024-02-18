@@ -1,38 +1,14 @@
 <script>
-    const show_modal = () => {
-        // @ts-ignore
-        document.getElementById('send_modal').showModal();
-    };
+    import { onDestroy } from 'svelte';
 
-    const read_file = () => {
-        // @ts-ignore
-        // let file = document.getElementById('input_file').files[0];
-        /* let exceptions = new Set([
-            'application/x-dosexec',
-            'application/x-executable',
-            'application/x-sharedlib',
-            'application/x-hdf5',
-            'application/java-archive',
-            'application/vnd.android.package-archive',
-            'application/x-rar',
-            'application/vnd.microsoft.portable-executable',
-        ]);
-
-        if (exceptions.has(file.type) || file.size >= 512 * 1024 * 1024) {
-            // TODO: Show alert error
-            return;
-        }
-
-        console.log(file);
-
-        const reader = new FileReader();
-        reader.addEventListener('load', (event) => {
-            send_file(event.target.result);
-        });
-        reader.readAsDataURL(file); */
-    };
+    onDestroy(() => {
+        promise = undefined;
+        selected_file = '';
+        show_form = true;
+    });
 
     const send_file = async () => {
+        show_form = false;
         const form = new FormData();
         // @ts-ignore
         let file = document.getElementById('input_file').files[0];
@@ -43,31 +19,82 @@
             body: form,
         });
 
-        console.log(await response.text());
+        if (!response.ok) {
+            // $notifications.unshift(new Notification('error', response.statusText));
+            return response.status;
+        } else {
+            // $notifications.unshift(new Notification('success', response.statusText));
+            let response_text = await response.text();
+            return response_text.split('/').pop();
+        }
     };
 
+    const handle_click = () => {
+        promise = send_file();
+    };
+
+    let promise;
     let selected_file = '';
+    let show_form = true;
 </script>
 
-<button class="btn btn-primary" on:click={show_modal}>send</button>
-<dialog id="send_modal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg">Send a file.</h3>
-        <div class="py-4 text-center">
-            <input
-                type="file"
-                class="file-input file-input-bordered file-input-primary block m-auto"
-                id="input_file"
-                bind:value={selected_file}
-            />
-            <button
-                class="btn max-w-40 block m-auto"
-                class:btn-disabled={selected_file === ''}
-                on:click={send_file}>Send</button
-            >
+<div id="modal_container" class="modal-box">
+    {#if show_form}
+        <div id="send_form">
+            <h2 class="font-bold text-lg">Send a file.</h2>
+            <div class="py-4 text-center">
+                <div class="alert">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        class="stroke-info shrink-0 w-6 h-6"
+                        ><path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path></svg
+                    >
+                    <div>
+                        <h3 class="font-bold">Details</h3>
+                        <div>
+                            Using this service, your file will be freely available on the Internet.
+                            As such, it's <b>strongly recommended</b> to not send any kind of personal
+                            information.
+                        </div>
+                        <h3 class="font-bold">Limitations</h3>
+                        <div>
+                            All of the limitations listed at <a href="https://0x0.st">0x0.st</a>,
+                            plus a fixed expire date of 7 days.
+                        </div>
+                    </div>
+                </div>
+                <input
+                    type="file"
+                    class="file-input file-input-bordered file-input-primary block m-auto"
+                    id="input_file"
+                    bind:value={selected_file}
+                />
+                <button
+                    class="btn max-w-40 block m-auto"
+                    class:btn-disabled={selected_file === ''}
+                    on:click={handle_click}>Send</button
+                >
+            </div>
         </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
-</dialog>
+    {:else}
+        {#await promise}
+            <div>
+                <span class="loading loading-spinner"></span>
+            </div>
+        {:then file_code}
+            <div>
+                File sent correctly! The file code is {file_code} <br />
+                Remember, the file code will expire in 7 days.
+            </div>
+        {:catch error}
+            <div>Error {error} occured.</div>
+        {/await}
+    {/if}
+</div>
