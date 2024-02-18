@@ -12,6 +12,10 @@
             }),
         })
             .then((result) => {
+                if (!result.ok) {
+                    console.log(result.status + ' - ' + result.statusText);
+                    return;
+                }
                 return result.blob();
             })
             .then((blob) => {

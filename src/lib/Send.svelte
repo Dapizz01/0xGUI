@@ -6,8 +6,8 @@
 
     const read_file = () => {
         // @ts-ignore
-        let file = document.getElementById('input_file').files[0];
-        let exceptions = new Set([
+        // let file = document.getElementById('input_file').files[0];
+        /* let exceptions = new Set([
             'application/x-dosexec',
             'application/x-executable',
             'application/x-sharedlib',
@@ -23,24 +23,27 @@
             return;
         }
 
+        console.log(file);
+
         const reader = new FileReader();
         reader.addEventListener('load', (event) => {
             send_file(event.target.result);
         });
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(file); */
     };
 
-    const send_file = async (file) => {
+    const send_file = async () => {
         const form = new FormData();
-        // form.append('file', new File(file, 'test.txt'));
-        form.append('file', document.getElementById('input_file').files[0]);
+        // @ts-ignore
+        let file = document.getElementById('input_file').files[0];
+        form.append('file', file, '@' + file.name);
 
-        const response = await fetch('http://localhost:54321/functions/v1/fetch_file', {
+        const response = await fetch('http://localhost:54321/functions/v1/send_file', {
             method: 'POST',
             body: form,
         });
 
-        console.log(response);
+        console.log(await response.text());
     };
 
     let selected_file = '';
@@ -60,7 +63,7 @@
             <button
                 class="btn max-w-40 block m-auto"
                 class:btn-disabled={selected_file === ''}
-                on:click={read_file}>Send</button
+                on:click={send_file}>Send</button
             >
         </div>
     </div>
