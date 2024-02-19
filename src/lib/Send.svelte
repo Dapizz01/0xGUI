@@ -1,11 +1,11 @@
 <script>
-    import { onDestroy } from 'svelte';
+    import success_svg from '../assets/success.svg';
+    import error_svg from '../assets/error.svg';
+    import info_svg from '../assets/info.svg';
 
-    onDestroy(() => {
-        promise = undefined;
-        selected_file = '';
-        show_form = true;
-    });
+    const get_link_from_filename = (filename) => {
+        return window.location.origin + window.location.pathname + '?file=' + filename;
+    };
 
     const send_file = async () => {
         show_form = false;
@@ -29,7 +29,7 @@
         }
     };
 
-    const handle_click = () => {
+    const handle_uploadclick = () => {
         promise = send_file();
     };
 
@@ -38,24 +38,13 @@
     let show_form = true;
 </script>
 
-<div id="modal_container" class="modal-box">
+<div class="modal-box">
     {#if show_form}
         <div id="send_form">
             <h2 class="font-bold text-lg">Send a file.</h2>
-            <div class="py-4 text-center">
+            <div class="pt-4 text-center">
                 <div class="alert">
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        class="stroke-info shrink-0 w-6 h-6"
-                        ><path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        ></path></svg
-                    >
+                    <img src={info_svg} class="stroke-info shrink-0 w-6 h-6" alt="Info icon" />
                     <div>
                         <h3 class="font-bold">Details</h3>
                         <div>
@@ -72,29 +61,47 @@
                 </div>
                 <input
                     type="file"
-                    class="file-input file-input-bordered file-input-primary block m-auto"
+                    class="file-input file-input-bordered file-input-primary block m-auto my-4 border-2"
                     id="input_file"
                     bind:value={selected_file}
                 />
                 <button
-                    class="btn max-w-40 block m-auto"
+                    class="btn btn-primary max-w-40 block m-auto mt-4"
                     class:btn-disabled={selected_file === ''}
-                    on:click={handle_click}>Send</button
+                    on:click={handle_uploadclick}>Upload</button
                 >
             </div>
         </div>
     {:else}
         {#await promise}
-            <div>
-                <span class="loading loading-spinner"></span>
+            <div class="text-center">
+                <span class="loading loading-spinner loading-lg"></span>
             </div>
-        {:then file_code}
-            <div>
-                File sent correctly! The file code is {file_code} <br />
-                Remember, the file code will expire in 7 days.
+        {:then filename}
+            <div class="card items-center">
+                <figure class="w-1/4">
+                    <img src={success_svg} alt="Success icon" />
+                </figure>
+                <div class="card-body">
+                    <h2 class="card-title">Success!</h2>
+                    The file has been correctly uploaded. Share this link to other people:
+                    <div class="alert">{get_link_from_filename(filename)}</div>
+                    Or, alternatively, just share the file code:
+                    <div class="alert">{filename}</div>
+                    Remember, the file will stay online for 7 days.
+                </div>
             </div>
         {:catch error}
-            <div>Error {error} occured.</div>
+            <div class="card items-center">
+                <figure class="w-1/4">
+                    <img src={error_svg} alt="Error icon" />
+                </figure>
+                <div class="card-body">
+                    <h2 class="card-title">Something went wrong...</h2>
+                    The file hasn't been correctly sent (error {error}). Wait some time and try
+                    again.
+                </div>
+            </div>
         {/await}
     {/if}
 </div>

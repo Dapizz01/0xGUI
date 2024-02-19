@@ -3,13 +3,17 @@
     import Header from './lib/Header.svelte';
     import Send from './lib/Send.svelte';
     import Receive from './lib/Receive.svelte';
-    import { notifications, Notification } from './lib/stores/notifications';
-    import Popup from './lib/Popup.svelte';
+    import { onMount } from 'svelte';
 
-    const test_func = () => {
-        $notifications.unshift(new Notification('success', 'Message'));
-        console.log($notifications);
-    };
+    let send_modal_status = true; // true -> visible, false -> hidden
+    let receive_modal_status = true;
+    let url_filename = new URLSearchParams(window.location.search).get('file');
+
+    onMount(() => {
+        if (url_filename !== '') {
+            show_receive_modal();
+        }
+    });
 
     const show_send_modal = () => {
         // @ts-ignore
@@ -24,10 +28,10 @@
     };
 
     const hide_send_modal = () => (send_modal_status = false);
-    const hide_receive_modal = () => (receive_modal_status = false);
-
-    let send_modal_status = true; // true -> visible, false -> hidden
-    let receive_modal_status = true;
+    const hide_receive_modal = () => {
+        receive_modal_status = false;
+        url_filename = '';
+    };
 </script>
 
 <main>
@@ -37,7 +41,7 @@
         I want to...
         <div class="group">
             <button class="btn btn-primary" on:click={show_send_modal}>send</button>
-            <button class="btn btn-primary" on:click={show_receive_modal}>receive</button>
+            <button class="btn btn-secondary" on:click={show_receive_modal}>receive</button>
         </div>
         a file.
     </div>
@@ -54,12 +58,10 @@
 
     <dialog id="receive_modal" class="modal">
         {#if receive_modal_status}
-            <Receive />
+            <Receive filename={url_filename} />
         {/if}
         <form method="dialog" class="modal-backdrop">
             <button on:click={hide_receive_modal}>close</button>
         </form>
     </dialog>
-
-    <button on:click={test_func}>Test</button>
 </main>
