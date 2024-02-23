@@ -7,17 +7,45 @@
         return window.location.origin + window.location.pathname + '?file=' + filename;
     };
 
-    const send_file = async () => {
-        show_form = false;
-        const form = new FormData();
-        // @ts-ignore
-        let file = document.getElementById('input_file').files[0];
-        form.append('file', file, '@' + file.name);
+    const file_to_base64 = (file) => {
+        const reader = new FileReader();
+        if (file) {
+            reader.readAsDataURL(file);
+        }
 
-        const response = await fetch('http://localhost:54321/functions/v1/send_file', {
-            method: 'POST',
-            body: form,
+        return new Promise((resolve, reject) => {
+            reader.onload = (event) => {
+                resolve(event.target.result);
+            };
         });
+    };
+
+    const send_file_encrypted = async () => {
+        show_form = false;
+        // @ts-ignore
+        const file = document.getElementById('input_file').files[0];
+        const form = new FormData();
+        const file_details = {
+            encrypted: 'yes',
+            payload: await file_to_base64(file),
+            name: file.name,
+            type: file.type,
+        };
+
+        const json_file = new File([JSON.stringify(file_details)], 'raw_json', {
+            type: 'application/json',
+        });
+
+        form.append('file', json_file, json_file.name);
+
+        const response = await fetch(
+            /* 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/send_file' */
+            'http://localhost:54321/functions/v1/send_file',
+            {
+                method: 'POST',
+                body: form,
+            },
+        );
 
         if (!response.ok) {
             // $notifications.unshift(new Notification('error', response.statusText));
@@ -25,12 +53,13 @@
         } else {
             // $notifications.unshift(new Notification('success', response.statusText));
             let response_text = await response.text();
-            return response_text.split('/').pop();
+            console.log(response_text);
+            return response_text.split('/').pop().split('.')[0];
         }
     };
 
     const handle_uploadclick = () => {
-        promise = send_file();
+        promise = send_file_encrypted();
     };
 
     let promise;
@@ -54,8 +83,7 @@
                         </div>
                         <h3 class="font-bold">Limitations</h3>
                         <div>
-                            All of the limitations listed at <a href="https://0x0.st">0x0.st</a>,
-                            plus a fixed expire date of 7 days.
+                            All of the limitations listed at <a href="https://0x0.st">0x0.st</a>
                         </div>
                     </div>
                 </div>
@@ -88,7 +116,6 @@
                     <div class="alert">{get_link_from_filename(filename)}</div>
                     Or, alternatively, just share the file code:
                     <div class="alert">{filename}</div>
-                    Remember, the file will stay online for 7 days.
                 </div>
             </div>
         {:catch error}

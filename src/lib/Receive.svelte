@@ -5,39 +5,39 @@
 
     export let filename;
 
-    const receive_file = async () => {
+    const receive_file_encrypted = async () => {
         show_form = false;
 
-        const response = await fetch('http://localhost:54321/functions/v1/fetch_file', {
-            method: 'POST',
-            body: JSON.stringify({
-                filename: filename,
-            }),
-        });
+        const response = await fetch(
+            /* 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/fetch_file' */
+            'http://localhost:54321/functions/v1/fetch_file',
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    filename: filename + '.json',
+                }),
+            },
+        );
 
-        if (!response.ok) {
-            return response.status;
-        } else {
-            let blob = await response.blob();
-            for (let key in response.headers.keys()) {
-                console.log(key);
-                console.log(response.headers.get(key));
-            }
-            if (blob != null) {
-                let url = window.URL.createObjectURL(blob);
-                let a = document.createElement('a');
-                a.href = url;
-                a.download = 'file'; // TODO: check if there's a way to keep the original filename
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-            }
-            console.log(blob);
+        const response_blob = await response.text();
+        const response_json = JSON.parse(response_blob);
+
+        const payload_fetch = await fetch(response_json.payload);
+        const payload_blob = await payload_fetch.blob();
+
+        if (payload_blob != null) {
+            let url = window.URL.createObjectURL(payload_blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = response_json.name;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
         }
     };
 
     const handle_downloadclick = () => {
-        promise = receive_file();
+        promise = receive_file_encrypted();
     };
 
     let show_form = true;

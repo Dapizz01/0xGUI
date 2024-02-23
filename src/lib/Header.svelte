@@ -1,3 +1,7 @@
+<script>
+    import github_svg from '../assets/github.svg';
+</script>
+
 <div class="hero">
     <div class="hero-content text-center">
         <div class="max-w-md">

@@ -1,16 +1,18 @@
 <script>
     import 'tailwindcss/tailwind.css';
+    import github_svg from './assets/github.svg';
     import Header from './lib/Header.svelte';
     import Send from './lib/Send.svelte';
     import Receive from './lib/Receive.svelte';
     import { onMount } from 'svelte';
+    import './lib/styles/style.css';
 
     let send_modal_status = true; // true -> visible, false -> hidden
     let receive_modal_status = true;
     let url_filename = new URLSearchParams(window.location.search).get('file');
 
     onMount(() => {
-        if (url_filename !== '') {
+        if (url_filename !== '' && url_filename !== null) {
             show_receive_modal();
         }
     });
@@ -34,17 +36,26 @@
     };
 </script>
 
-<main>
-    <Header />
+<main id="page_container">
+    <div id="content_wrap">
+        <Header />
 
-    <div class="text-center">
-        I want to...
-        <div class="group">
-            <button class="btn btn-primary" on:click={show_send_modal}>send</button>
-            <button class="btn btn-secondary" on:click={show_receive_modal}>receive</button>
+        <div class="text-center">
+            I want to...
+            <div class="group">
+                <button class="btn btn-primary" on:click={show_send_modal}>send</button>
+                <button class="btn btn-secondary" on:click={show_receive_modal}>receive</button>
+            </div>
+            a file.
         </div>
-        a file.
     </div>
+
+    <!--footer class="footer p-4 h-1/8">
+        <a href="https://github.com/dapizz01/" class="inline-block">
+            <img src={github_svg} alt="Github logo link" class="h-full" />
+        </a>
+        Just some text.
+    </footer-->
 
     <!-- Modals -->
     <dialog id="send_modal" class="modal">
