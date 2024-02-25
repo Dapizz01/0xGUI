@@ -2,6 +2,8 @@
     import success_svg from '../assets/success.svg';
     import error_svg from '../assets/error.svg';
     import info_svg from '../assets/info.svg';
+    import { keys } from '../lib/stores/crypto.js';
+    import Receive from './Receive.svelte';
 
     const get_link_from_filename = (filename) => {
         return window.location.origin + window.location.pathname + '?file=' + filename;
@@ -20,18 +22,94 @@
         });
     };
 
-    const send_file_encrypted = async () => {
+    const send_file = async () => {
         show_form = false;
         // @ts-ignore
         const file = document.getElementById('input_file').files[0];
         const form = new FormData();
-        const file_details = {
-            encrypted: 'yes',
-            payload: await file_to_base64(file),
-            name: file.name,
-            type: file.type,
-        };
+        let file_details;
 
+        if (encrypted) {
+            const aes_key = await window.crypto.subtle.generateKey(
+                {
+                    name: 'AES-GCM',
+                    length: 256,
+                },
+                true,
+                ['encrypt', 'decrypt'],
+            );
+
+            // const file_buffer = await file.arrayBuffer();
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            const file_encrypted = await window.crypto.subtle.encrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: iv,
+                },
+                aes_key,
+                await file.arrayBuffer(),
+            );
+
+            const receiver_key_file = await fetch(
+                'http://localhost:54321/functions/v1/fetch_file',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        filename: receiver_link + '.json',
+                    }),
+                },
+            );
+
+            const receiver_public_key = await window.crypto.subtle.importKey(
+                'jwk',
+                JSON.parse(await receiver_key_file.text()),
+                {
+                    name: 'RSA-OAEP',
+                    hash: 'SHA-256',
+                },
+                true,
+                ['wrapKey'],
+            );
+
+            const aes_encrypted = await window.crypto.subtle.wrapKey(
+                'jwk',
+                aes_key,
+                receiver_public_key,
+                {
+                    name: 'RSA-OAEP',
+                },
+            );
+
+            file_details = {
+                encrypted: 'yes',
+                payload: await file_to_base64(
+                    new Blob([file_encrypted], {
+                        type: 'application/octet-stream',
+                    }),
+                ),
+                iv: await file_to_base64(
+                    new Blob([iv], {
+                        type: 'application/octet-stream',
+                    }),
+                ),
+                aes_key: await file_to_base64(
+                    new Blob([aes_encrypted], {
+                        type: 'application/octet-stream',
+                    }),
+                ),
+                name: file.name,
+                type: file.type,
+            };
+
+            console.log(file_details);
+        } else {
+            file_details = {
+                encrypted: 'no',
+                payload: await file_to_base64(file),
+                name: file.name,
+                type: file.type,
+            };
+        }
         const json_file = new File([JSON.stringify(file_details)], 'raw_json', {
             type: 'application/json',
         });
@@ -39,7 +117,7 @@
         form.append('file', json_file, json_file.name);
 
         const response = await fetch(
-            /* 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/send_file' */
+            // 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/send_file'
             'http://localhost:54321/functions/v1/send_file',
             {
                 method: 'POST',
@@ -59,11 +137,13 @@
     };
 
     const handle_uploadclick = () => {
-        promise = send_file_encrypted();
+        promise = send_file();
     };
 
     let promise;
+    let receiver_link = '';
     let selected_file = '';
+    let encrypted = false;
     let show_form = true;
 </script>
 
@@ -87,15 +167,40 @@
                         </div>
                     </div>
                 </div>
+                <div class="block m-auto">
+                    <div class="form-control w-56">
+                        <label class="cursor-pointer label">
+                            {#if !encrypted}
+                                <span class="label-text">Not encrypted</span>
+                            {/if}
+                            <input
+                                type="checkbox"
+                                class="toggle toggle-primary"
+                                bind:checked={encrypted}
+                            />
+                            {#if encrypted}
+                                <span class="label-text">Encrypted</span>
+                            {/if}
+                        </label>
+                    </div>
+                </div>
                 <input
                     type="file"
                     class="file-input file-input-bordered file-input-primary block m-auto my-4 border-2"
                     id="input_file"
                     bind:value={selected_file}
                 />
+                {#if encrypted}
+                    <input
+                        type="text"
+                        placeholder="Write the receiver key"
+                        class="input input-bordered input-primary block m-auto border-2"
+                        bind:value={receiver_link}
+                    />
+                {/if}
                 <button
                     class="btn btn-primary max-w-40 block m-auto mt-4"
-                    class:btn-disabled={selected_file === ''}
+                    class:btn-disabled={selected_file === '' || (encrypted && receiver_link === '')}
                     on:click={handle_uploadclick}>Upload</button
                 >
             </div>

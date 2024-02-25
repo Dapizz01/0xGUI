@@ -2,6 +2,7 @@
     import success_svg from '../assets/success.svg';
     import error_svg from '../assets/error.svg';
     import info_svg from '../assets/info.svg';
+    import { keys } from '../lib/stores/crypto.js';
 
     export let filename;
 
@@ -19,14 +20,57 @@
             },
         );
 
-        const response_blob = await response.text();
-        const response_json = JSON.parse(response_blob);
+        const response_text = await response.text();
+        const response_json = JSON.parse(response_text);
+        let payload;
 
-        const payload_fetch = await fetch(response_json.payload);
-        const payload_blob = await payload_fetch.blob();
+        if (response_json.encrypted === 'yes') {
+            // TODO
+            /* const payload_fetch = await fetch(response_json.payload);
+            payload_blob = await payload_fetch.blob();
+            console.log(await payload_blob.arrayBuffer()); */
+            const aes_key_encrypted = await (
+                await (await fetch(response_json.aes_key)).blob()
+            ).arrayBuffer();
+            const aes_key = await window.crypto.subtle.unwrapKey(
+                'jwk',
+                aes_key_encrypted,
+                (await keys).privateKey,
+                {
+                    name: 'RSA-OAEP',
+                    hash: 'SHA-256',
+                },
+                {
+                    name: 'AES-GCM',
+                },
+                true,
+                ['encrypt', 'decrypt'],
+            );
+            console.log(aes_key);
+            const iv = await (await (await fetch(response_json.iv)).blob()).arrayBuffer();
+            console.log(iv);
+            const payload_encrypted = await (
+                await (await fetch(response_json.payload)).blob()
+            ).arrayBuffer();
+            console.log(payload_encrypted);
+            const payload_arraybuffer = await window.crypto.subtle.decrypt(
+                {
+                    name: 'AES-GCM',
+                    iv: iv,
+                },
+                aes_key,
+                payload_encrypted,
+            );
+            payload = new Blob([payload_arraybuffer], {
+                type: response_json.type,
+            });
+        } else {
+            const payload_fetch = await fetch(response_json.payload);
+            payload = await payload_fetch.blob();
+        }
 
-        if (payload_blob != null) {
-            let url = window.URL.createObjectURL(payload_blob);
+        if (payload != null) {
+            let url = window.URL.createObjectURL(payload);
             let a = document.createElement('a');
             a.href = url;
             a.download = response_json.name;
@@ -51,7 +95,7 @@
             <input
                 type="text"
                 placeholder="Type the file code"
-                class="file-input file-input-bordered file-input-secondary block m-auto border-2"
+                class="input input-bordered input-secondary block m-auto border-2"
                 bind:value={filename}
             />
             <button

@@ -6,6 +6,7 @@
     import Receive from './lib/Receive.svelte';
     import { onMount } from 'svelte';
     import './lib/styles/style.css';
+    import Key from './lib/Key.svelte';
 
     let send_modal_status = true; // true -> visible, false -> hidden
     let receive_modal_status = true;
@@ -39,6 +40,8 @@
 <main id="page_container">
     <div id="content_wrap">
         <Header />
+
+        <Key />
 
         <div class="text-center">
             I want to...
