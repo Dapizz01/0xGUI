@@ -1,58 +1,68 @@
 <script>
     import success_svg from '../assets/success.svg';
     import error_svg from '../assets/error.svg';
-    import info_svg from '../assets/info.svg';
-    import { keys } from '../lib/stores/crypto.js';
+    import { keys } from '../lib/utils/crypto.js';
 
     export let filename;
 
-    const receive_file_encrypted = async () => {
+    const base64_to_arraybuffer = async (base64) => {
+        return (await (await fetch(base64)).blob()).arrayBuffer();
+    };
+
+    const receive_file = async () => {
         show_form = false;
 
-        const response = await fetch(
-            /* 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/fetch_file' */
-            'http://localhost:54321/functions/v1/fetch_file',
-            {
-                method: 'POST',
-                body: JSON.stringify({
-                    filename: filename + '.json',
-                }),
-            },
-        );
+        let response;
+        let payload;
+        let aes_key;
+
+        try {
+            response = await fetch(
+                /* 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/fetch_file' */
+                'http://localhost:54321/functions/v1/fetch_file',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        filename: filename + '.json',
+                    }),
+                },
+            );
+        } catch (error) {
+            throw new Error(
+                'A network error happened while downloading the file. Make sure your Internet connection is stable and try again.',
+            );
+        }
 
         const response_text = await response.text();
         const response_json = JSON.parse(response_text);
-        let payload;
 
         if (response_json.encrypted === 'yes') {
-            // TODO
-            /* const payload_fetch = await fetch(response_json.payload);
-            payload_blob = await payload_fetch.blob();
-            console.log(await payload_blob.arrayBuffer()); */
-            const aes_key_encrypted = await (
-                await (await fetch(response_json.aes_key)).blob()
-            ).arrayBuffer();
-            const aes_key = await window.crypto.subtle.unwrapKey(
-                'jwk',
-                aes_key_encrypted,
-                (await keys).privateKey,
-                {
-                    name: 'RSA-OAEP',
-                    hash: 'SHA-256',
-                },
-                {
-                    name: 'AES-GCM',
-                },
-                true,
-                ['encrypt', 'decrypt'],
-            );
-            console.log(aes_key);
-            const iv = await (await (await fetch(response_json.iv)).blob()).arrayBuffer();
-            console.log(iv);
-            const payload_encrypted = await (
-                await (await fetch(response_json.payload)).blob()
-            ).arrayBuffer();
-            console.log(payload_encrypted);
+            const aes_key_encrypted = await base64_to_arraybuffer(response_json.aes_key);
+            const iv = await base64_to_arraybuffer(response_json.iv);
+            const payload_encrypted = await base64_to_arraybuffer(response_json.payload);
+
+            try {
+                aes_key = await window.crypto.subtle.unwrapKey(
+                    'jwk',
+                    aes_key_encrypted,
+                    (await keys).privateKey,
+                    {
+                        name: 'RSA-OAEP',
+                        // @ts-ignore
+                        hash: 'SHA-256',
+                    },
+                    {
+                        name: 'AES-GCM',
+                    },
+                    true,
+                    ['encrypt', 'decrypt'],
+                );
+            } catch (error) {
+                throw new Error(
+                    'The selected file exists, but cannot be opened because the designated receiver is someone else.',
+                );
+            }
+
             const payload_arraybuffer = await window.crypto.subtle.decrypt(
                 {
                     name: 'AES-GCM',
@@ -61,6 +71,7 @@
                 aes_key,
                 payload_encrypted,
             );
+
             payload = new Blob([payload_arraybuffer], {
                 type: response_json.type,
             });
@@ -81,7 +92,7 @@
     };
 
     const handle_downloadclick = () => {
-        promise = receive_file_encrypted();
+        promise = receive_file();
     };
 
     let show_form = true;

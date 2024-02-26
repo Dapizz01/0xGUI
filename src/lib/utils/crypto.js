@@ -1,19 +1,3 @@
-// import { writable } from 'svelte/store';
-
-/* export const keys = (() => {
-    const store = writable('Keys loading');
-    get_keys()
-        .then((keys) => {
-            console.log(keys);
-            return crypto.subtle.exportKey('jwk', keys.publicKey);
-        })
-        .then((public_key) => {
-            console.log(public_key);
-            store.set(public_key.n);
-        });
-    return store;
-})(); */
-
 export const keys = generate_keys().then((keys) => keys);
 
 export const public_key_link = keys.then((result_keys) =>
@@ -36,7 +20,6 @@ async function get_public_key(k) {
     });
     // TODO: cache the 0x0 link
     return await response.text();
-    return 'WIP!';
 }
 
 async function generate_keys() {
@@ -84,7 +67,6 @@ async function generate_keys() {
         true,
         ['wrapKey', 'unwrapKey'],
     );
-    console.log(new_keys);
     const private_key = await window.crypto.subtle.exportKey('jwk', new_keys.privateKey);
     const public_key = await window.crypto.subtle.exportKey('jwk', new_keys.publicKey);
     date.setTime(date.getTime() + 24 * 60 * 60 * 1000);

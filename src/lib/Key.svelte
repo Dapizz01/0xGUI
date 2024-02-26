@@ -1,5 +1,5 @@
 <script>
-    import { public_key_link } from '../lib/stores/crypto.js';
+    import { public_key_link } from './utils/crypto.js';
 </script>
 
 <div>

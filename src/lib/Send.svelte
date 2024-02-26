@@ -2,8 +2,6 @@
     import success_svg from '../assets/success.svg';
     import error_svg from '../assets/error.svg';
     import info_svg from '../assets/info.svg';
-    import { keys } from '../lib/stores/crypto.js';
-    import Receive from './Receive.svelte';
 
     const get_link_from_filename = (filename) => {
         return window.location.origin + window.location.pathname + '?file=' + filename;
@@ -28,6 +26,9 @@
         const file = document.getElementById('input_file').files[0];
         const form = new FormData();
         let file_details;
+        let receiver_key_file;
+        let receiver_public_key;
+        let response;
 
         if (encrypted) {
             const aes_key = await window.crypto.subtle.generateKey(
@@ -39,7 +40,6 @@
                 ['encrypt', 'decrypt'],
             );
 
-            // const file_buffer = await file.arrayBuffer();
             const iv = window.crypto.getRandomValues(new Uint8Array(12));
             const file_encrypted = await window.crypto.subtle.encrypt(
                 {
@@ -50,26 +50,38 @@
                 await file.arrayBuffer(),
             );
 
-            const receiver_key_file = await fetch(
-                'http://localhost:54321/functions/v1/fetch_file',
-                {
+            let receiver_key_file;
+
+            try {
+                receiver_key_file = await fetch('http://localhost:54321/functions/v1/fetch_file', {
                     method: 'POST',
                     body: JSON.stringify({
                         filename: receiver_link + '.json',
                     }),
-                },
-            );
+                });
+            } catch (error) {
+                throw new Error(
+                    'A network error happened while downloading the receiver key. Make sure your Internet connection is stable and try again.',
+                );
+            }
 
-            const receiver_public_key = await window.crypto.subtle.importKey(
-                'jwk',
-                JSON.parse(await receiver_key_file.text()),
-                {
-                    name: 'RSA-OAEP',
-                    hash: 'SHA-256',
-                },
-                true,
-                ['wrapKey'],
-            );
+            if (!receiver_key_file.ok)
+                throw new Error('The submitted receiver key does not exist.');
+
+            try {
+                receiver_public_key = await window.crypto.subtle.importKey(
+                    'jwk',
+                    JSON.parse(await receiver_key_file.text()),
+                    {
+                        name: 'RSA-OAEP',
+                        hash: 'SHA-256',
+                    },
+                    true,
+                    ['wrapKey'],
+                );
+            } catch (error) {
+                throw new Error('The submitted key value is not a key, but a file instead.');
+            }
 
             const aes_encrypted = await window.crypto.subtle.wrapKey(
                 'jwk',
@@ -100,8 +112,6 @@
                 name: file.name,
                 type: file.type,
             };
-
-            console.log(file_details);
         } else {
             file_details = {
                 encrypted: 'no',
@@ -116,22 +126,25 @@
 
         form.append('file', json_file, json_file.name);
 
-        const response = await fetch(
-            // 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/send_file'
-            'http://localhost:54321/functions/v1/send_file',
-            {
-                method: 'POST',
-                body: form,
-            },
-        );
+        try {
+            response = await fetch(
+                // 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/send_file'
+                'http://localhost:54321/functions/v1/send_file',
+                {
+                    method: 'POST',
+                    body: form,
+                },
+            );
+        } catch (error) {
+            throw new Error(
+                'A network error happened while uploading the receiver encrypted file. Make sure your Internet connection is stable and try again.',
+            );
+        }
 
         if (!response.ok) {
-            // $notifications.unshift(new Notification('error', response.statusText));
             return response.status;
         } else {
-            // $notifications.unshift(new Notification('success', response.statusText));
             let response_text = await response.text();
-            console.log(response_text);
             return response_text.split('/').pop().split('.')[0];
         }
     };
@@ -230,8 +243,7 @@
                 </figure>
                 <div class="card-body">
                     <h2 class="card-title">Something went wrong...</h2>
-                    The file hasn't been correctly sent (error {error}). Wait some time and try
-                    again.
+                    {error}
                 </div>
             </div>
         {/await}
