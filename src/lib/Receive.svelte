@@ -1,7 +1,6 @@
 <script>
-    import success_svg from '../assets/success.svg';
-    import error_svg from '../assets/error.svg';
-    import { keys } from '../lib/utils/crypto.js';
+    import { get_private_key } from '../lib/utils/crypto.js';
+    import { sanitize_input } from '../lib/utils/misc.js';
 
     export let filename;
 
@@ -15,6 +14,8 @@
         let response;
         let payload;
         let aes_key;
+
+        filename = sanitize_input(filename);
 
         try {
             response = await fetch(
@@ -33,6 +34,10 @@
             );
         }
 
+        if (!response.ok) {
+            throw new Error('The requested file does not exist.');
+        }
+
         const response_text = await response.text();
         const response_json = JSON.parse(response_text);
 
@@ -45,7 +50,7 @@
                 aes_key = await window.crypto.subtle.unwrapKey(
                     'jwk',
                     aes_key_encrypted,
-                    (await keys).privateKey,
+                    await get_private_key(),
                     {
                         name: 'RSA-OAEP',
                         // @ts-ignore
@@ -123,7 +128,21 @@
         {:then filename}
             <div class="card items-center">
                 <figure class="w-1/4">
-                    <img src={success_svg} alt="Success icon" />
+                    <svg
+                        class="stroke-current"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        />
+                    </svg>
                 </figure>
                 <div class="card-body">
                     <h2 class="card-title">Success!</h2>
@@ -133,12 +152,25 @@
         {:catch error}
             <div class="card items-center">
                 <figure class="w-1/4">
-                    <img src={error_svg} alt="Error icon" />
+                    <svg
+                        class="stroke-current"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        />
+                    </svg>
                 </figure>
                 <div class="card-body">
                     <h2 class="card-title">Something went wrong...</h2>
-                    The file hasn't been correctly downloaded (error {error}). Wait some time and
-                    try again.
+                    {error}
                 </div>
             </div>
         {/await}

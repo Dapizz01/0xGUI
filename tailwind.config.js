@@ -5,21 +5,7 @@ export default {
         extend: {},
     },
     daisyui: {
-        themes: [
-            {
-                mytheme: {
-                    primary: '#00a5ff',
-                    secondary: '#00e700',
-                    accent: '#00dcff',
-                    neutral: '#1d1006',
-                    'base-100': '#fffcff',
-                    info: '#00adf2',
-                    success: '#88d300',
-                    warning: '#cd4800',
-                    error: '#ff6f7a',
-                },
-            },
-        ],
+        themes: ['dim', 'cmyk'],
     },
     plugins: [require('daisyui')],
 };

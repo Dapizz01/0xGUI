@@ -1,7 +1,5 @@
 <script>
-    import success_svg from '../assets/success.svg';
-    import error_svg from '../assets/error.svg';
-    import info_svg from '../assets/info.svg';
+    import { sanitize_input } from '../lib/utils/misc.js';
 
     const get_link_from_filename = (filename) => {
         return window.location.origin + window.location.pathname + '?file=' + filename;
@@ -30,6 +28,12 @@
         let receiver_public_key;
         let response;
 
+        if (file.size > 400000) {
+            throw new Error('The file is too large to upload.');
+        }
+
+        receiver_link = sanitize_input(receiver_link);
+
         if (encrypted) {
             const aes_key = await window.crypto.subtle.generateKey(
                 {
@@ -49,8 +53,6 @@
                 aes_key,
                 await file.arrayBuffer(),
             );
-
-            let receiver_key_file;
 
             try {
                 receiver_key_file = await fetch('http://localhost:54321/functions/v1/fetch_file', {
@@ -125,16 +127,13 @@
         });
 
         form.append('file', json_file, json_file.name);
+        form.append('expires', '24');
 
         try {
-            response = await fetch(
-                // 'https://promaobfghoibelpbtwf.supabase.co/functions/v1/send_file'
-                'http://localhost:54321/functions/v1/send_file',
-                {
-                    method: 'POST',
-                    body: form,
-                },
-            );
+            response = await fetch('http://localhost:54321/functions/v1/send_file', {
+                method: 'POST',
+                body: form,
+            });
         } catch (error) {
             throw new Error(
                 'A network error happened while uploading the receiver encrypted file. Make sure your Internet connection is stable and try again.',
@@ -166,7 +165,20 @@
             <h2 class="font-bold text-lg">Send a file.</h2>
             <div class="pt-4 text-center">
                 <div class="alert">
-                    <img src={info_svg} class="stroke-info shrink-0 w-6 h-6" alt="Info icon" />
+                    <svg
+                        class="w-6 h-6 fill-current"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M2 12a10 10 0 1 1 20 0 10 10 0 0 1-20 0Zm9.4-5.5a1 1 0 1 0 0 2 1 1 0 1 0 0-2ZM10 10a1 1 0 1 0 0 2h1v3h-1a1 1 0 1 0 0 2h4a1 1 0 1 0 0-2h-1v-4c0-.6-.4-1-1-1h-2Z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+
                     <div>
                         <h3 class="font-bold">Details</h3>
                         <div>
@@ -176,7 +188,9 @@
                         </div>
                         <h3 class="font-bold">Limitations</h3>
                         <div>
-                            All of the limitations listed at <a href="https://0x0.st">0x0.st</a>
+                            Check the repository link in the footer for the complete list. Also,
+                            only files smaller than 400MB are allowed, and files will stay online
+                            only for 24 hours.
                         </div>
                     </div>
                 </div>
@@ -226,7 +240,21 @@
         {:then filename}
             <div class="card items-center">
                 <figure class="w-1/4">
-                    <img src={success_svg} alt="Success icon" />
+                    <svg
+                        class="stroke-current"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            d="M8.5 11.5 11 14l4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        />
+                    </svg>
                 </figure>
                 <div class="card-body">
                     <h2 class="card-title">Success!</h2>
@@ -239,7 +267,21 @@
         {:catch error}
             <div class="card items-center">
                 <figure class="w-1/4">
-                    <img src={error_svg} alt="Error icon" />
+                    <svg
+                        class="stroke-current"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.5"
+                            d="m15 9-6 6m0-6 6 6m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        />
+                    </svg>
                 </figure>
                 <div class="card-body">
                     <h2 class="card-title">Something went wrong...</h2>
